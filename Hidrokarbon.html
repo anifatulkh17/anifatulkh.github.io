@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Word of Hydrocarbon - Kids Mode</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Fredoka', cursive;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(to bottom, #ffecb3, #fffde7);
+      color: #4e342e;
+    }
+
+    h1 {
+      font-size: 38px;
+      margin-top: 10px;
+      font-weight: 600;
+      color: #ff6f00;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .screen {
+      display: none;
+      margin-top: 30px;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .active {
+      display: block;
+    }
+
+    .button {
+      padding: 14px 28px;
+      margin: 10px;
+      background-color: #f06292;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      transition: background-color 0.3s, transform 0.2s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .button:hover {
+      background-color: #ec407a;
+      transform: scale(1.05);
+    }
+
+    #wordsearch-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 32px);
+      gap: 4px;
+      justify-content: center;
+      margin-bottom: 20px;
+      padding: 12px;
+      background-color: #fff3e0;
+      border: 3px dashed #fbc02d;
+      border-radius: 12px;
+      box-shadow: inset 0 0 10px #ffe082;
+    }
+
+    .grid-cell {
+      width: 32px;
+      height: 32px;
+      background: #fff9c4;
+      border: 2px solid #ffe082;
+      line-height: 32px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      font-weight: bold;
+      font-size: 18px;
+      transition: background 0.3s, transform 0.2s;
+      border-radius: 6px;
+    }
+
+    .grid-cell:hover {
+      background: #ffecb3;
+      transform: scale(1.1);
+    }
+
+    .grid-cell.selected {
+      background: #ffd54f;
+      color: #000;
+    }
+
+    #formulas-list {
+      margin-bottom: 20px;
+      font-size: 20px;
+      color: #6d4c41;
+    }
+
+    #formulas-list div.found {
+      text-decoration: line-through;
+      color: #a1887f;
+      font-style: italic;
+    }
+
+    input[type="text"] {
+      border: 2px solid #fbc02d;
+      border-radius: 8px;
+      padding: 10px;
+      width: 220px;
+      font-size: 18px;
+      text-align: center;
+      background-color: #fffde7;
+    }
+
+    #message {
+      font-size: 20px;
+      margin-top: 15px;
+      color: #d84315;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Word of Hydrocarbon</h1>
+
+<div id="start-screen" class="screen active">
+  <button class="button" onclick="showScreen('menu-screen')">Mulai</button>
+</div>
+
+<div id="menu-screen" class="screen">
+  <button class="button" onclick="startWordsearch()">Mencari Kata</button>
+  <button class="button" onclick="startPuzzle()">Menyusun Kata</button>
+</div>
+
+<div id="wordsearch-screen" class="screen">
+  <div id="formulas-list"><b>Rumus Hidrokarbon yang Dicari:</b><br></div>
+  <div id="wordsearch-grid"></div>
+  <button class="button" onclick="showScreen('menu-screen')">Kembali</button>
+</div>
+
+<div id="puzzle-screen" class="screen">
+  <div id="puzzle-hint" style="font-size: 20px; margin-bottom: 10px;"></div>
+  <div id="puzzle-letters" style="margin: 10px; font-size: 26px; letter-spacing: 5px;"></div>
+  <input type="text" id="puzzle-input" placeholder="Jawaban Anda">
+  <br><br>
+  <button class="button" id="btn-submit-puzzle">Kirim</button>
+  <div id="message"></div>
+  <br>
+  <button class="button" onclick="showScreen('menu-screen')">Kembali</button>
+</div>
+
+<script>
+function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+}
+
+const formulas = [
+  { formula: 'CH4', word: 'METANA' },
+  { formula: 'C2H6', word: 'ETANA' },
+  { formula: 'C2H4', word: 'ETENA' },
+  { formula: 'C2H2', word: 'ETUNA' },
+  { formula: 'C3H8', word: 'PROPANA' },
+  { formula: 'C3H6', word: 'PROPENA' },
+  { formula: 'C3H4', word: 'PROPUNA' },
+  { formula: 'C4H10', word: 'BUTANA' },
+  { formula: 'C4H8', word: 'BUTENA' },
+  { formula: 'C4H6', word: 'BUTUNA' },
+  { formula: 'C5H12', word: 'PENTANA' },
+  { formula: 'C6H14', word: 'HEKSANA' }
+];
+
+let gridSize = 12;
+let grid = [];
+let selectedCells = [];
+let foundWords = new Set();
+
+function startWordsearch() {
+  showScreen('wordsearch-screen');
+  initWordsearchGame();
+}
+
+function generateEmptyGrid() {
+  let g = [];
+  for (let i = 0; i < gridSize; i++) {
+    g.push(Array(gridSize).fill(''));
+  }
+  return g;
+}
+
+function fillGridRandomLetters() {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      if (grid[r][c] === '') {
+        grid[r][c] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      }
+    }
+  }
+}
+
+function placeWord(grid, word) {
+  const directions = [[0, 1], [1, 0], [1, 1], [-1, 1]];
+  let placed = false;
+  let tries = 0;
+  while (!placed && tries < 100) {
+    let dir = directions[Math.floor(Math.random() * directions.length)];
+    let r = Math.floor(Math.random() * gridSize);
+    let c = Math.floor(Math.random() * gridSize);
+    let fits = true;
+    for (let i = 0; i < word.length; i++) {
+      let nr = r + dir[0] * i;
+      let nc = c + dir[1] * i;
+      if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize) {
+        fits = false;
+        break;
+      }
+      if (grid[nr][nc] !== '' && grid[nr][nc] !== word[i]) {
+        fits = false;
+        break;
+      }
+    }
+    if (fits) {
+      for (let i = 0; i < word.length; i++) {
+        grid[r + dir[0] * i][c + dir[1] * i] = word[i];
+      }
+      placed = true;
+    }
+    tries++;
+  }
+}
+
+function initWordsearchGame() {
+  grid = generateEmptyGrid();
+  selectedCells = [];
+  foundWords.clear();
+  const gridContainer = document.getElementById('wordsearch-grid');
+  const listDiv = document.getElementById('formulas-list');
+  gridContainer.innerHTML = '';
+  listDiv.innerHTML = '<b>Rumus Hidrokarbon yang Dicari:</b><br>';
+
+  let selected = formulas.sort(() => Math.random() - 0.5).slice(0, 10);
+  selected.forEach(entry => {
+    placeWord(grid, entry.word);
+    listDiv.innerHTML += `<div data-word="${entry.word}">${entry.formula}</div>`;
+  });
+
+  fillGridRandomLetters();
+
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      let div = document.createElement('div');
+      div.className = 'grid-cell';
+      div.innerText = grid[r][c];
+      div.dataset.row = r;
+      div.dataset.col = c;
+      div.onclick = () => {
+        div.classList.toggle('selected');
+        checkWordSelection();
+      };
+      gridContainer.appendChild(div);
+    }
+  }
+}
+
+function checkWordSelection() {
+  let selected = Array.from(document.querySelectorAll('.grid-cell.selected'));
+  let word = selected.map(cell => cell.innerText).join('');
+  let reversed = selected.map(cell => cell.innerText).reverse().join('');
+  let match = formulas.find(f => f.word === word || f.word === reversed);
+  if (match && !foundWords.has(match.word)) {
+    foundWords.add(match.word);
+    selected.forEach(cell => {
+      cell.classList.remove('selected');
+      cell.style.background = '#aed581';
+    });
+    document.querySelectorAll(`#formulas-list div`).forEach(d => {
+      if (d.dataset.word === match.word) {
+        d.classList.add('found');
+      }
+    });
+  }
+}
+
+const puzzleHints = [
+  { hint: "Alkana dengan 1 karbon", answer: "METANA" },
+  { hint: "Alkena dengan 3 karbon", answer: "PROPENA" },
+  { hint: "Alkuna dengan 2 karbon", answer: "ETUNA" },
+  { hint: "Tipe ikatan rangkap dua", answer: "ALKENA" },
+  { hint: "Hidrokarbon tak jenuh dengan tiga ikatan rangkap", answer: "ALKUNA" },
+  { hint: "Rantai karbon lurus disebut rantai...", answer: "NORMAL" },
+  { hint: "Isomer yang berbeda posisi cabang", answer: "POSISI" },
+  { hint: "Reaksi pembakaran sempurna menghasilkan ... dan air", answer: "KARBONDIOKSIDA" },
+  { hint: "Golongan hidrokarbon jenuh", answer: "ALKANA" },
+  { hint: "Awalan untuk 5 karbon", answer: "PENTA" }
+];
+
+let currentPuzzle = 0;
+
+function startPuzzle() {
+  showScreen('puzzle-screen');
+  currentPuzzle = 0;
+  showPuzzle();
+}
+
+function showPuzzle() {
+  let data = puzzleHints[currentPuzzle];
+  document.getElementById('puzzle-hint').innerText = "Hint: " + data.hint;
+  document.getElementById('puzzle-input').value = '';
+  document.getElementById('puzzle-letters').innerText = shuffle(data.answer).join(' ');
+  document.getElementById('message').innerText = '';
+}
+
+document.getElementById('btn-submit-puzzle').onclick = () => {
+  let answer = document.getElementById('puzzle-input').value.toUpperCase().trim();
+  if (answer === puzzleHints[currentPuzzle].answer) {
+    document.getElementById('message').innerText = 'Benar!';
+    currentPuzzle++;
+    if (currentPuzzle < puzzleHints.length) {
+      setTimeout(showPuzzle, 1000);
+    } else {
+      document.getElementById('message').innerText = 'Semua soal selesai!';
+    }
+  } else {
+    document.getElementById('message').innerText = 'Salah. Coba lagi.';
+  }
+};
+
+function shuffle(str) {
+  let arr = str.split('');
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+</script>
+
+</body>
+</html>
